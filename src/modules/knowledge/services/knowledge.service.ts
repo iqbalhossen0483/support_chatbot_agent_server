@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Page } from '../../../entities/page.entity.js';
 import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
+import { ScrapeConfigDto } from '../dto/create-website.dto.js';
 
 @Injectable()
 export class KnowledgeService {
@@ -31,19 +32,11 @@ export class KnowledgeService {
   async registerWebsite(
     name: string,
     baseUrl: string,
-    scrapeConfig: Record<string, unknown> = {},
+    scrapeConfig: ScrapeConfigDto = {},
   ) {
     // Generate API key
     const rawApiKey = `ak_live_${uuidv4().replace(/-/g, '')}`;
     const apiKeyHash = await bcrypt.hash(rawApiKey, 12);
-
-    const website = this.websiteRepo.create({
-      name,
-      base_url: baseUrl,
-      scrape_config: scrapeConfig,
-      api_key_hash: apiKeyHash,
-      status: WebsiteStatus.SCRAPING,
-    });
 
     const existing = await this.websiteRepo.findOne({
       where: { base_url: baseUrl },
@@ -53,6 +46,14 @@ export class KnowledgeService {
         `Website with URL "${baseUrl}" is already registered`,
       );
     }
+
+    const website = this.websiteRepo.create({
+      name,
+      base_url: baseUrl,
+      scrape_config: scrapeConfig as Record<string, unknown>,
+      api_key_hash: apiKeyHash,
+      status: WebsiteStatus.SCRAPING,
+    });
 
     const saved = await this.websiteRepo.save(website);
 
@@ -109,7 +110,11 @@ export class KnowledgeService {
   async triggerRescrape(id: number) {
     const website = await this.getWebsite(id);
 
-    await this.websiteRepo.update(id, { status: WebsiteStatus.SCRAPING });
+    await this.websiteRepo.update(id, {
+      status: WebsiteStatus.SCRAPING,
+      total_pages: 0,
+      total_chunks: 0,
+    });
 
     await this.scraperQueue.add(
       'scrape',
@@ -144,7 +149,6 @@ export class KnowledgeService {
         'title',
         'status',
         'http_status',
-        'content_hash',
         'created_at',
       ],
       order: { created_at: 'ASC' },

@@ -7,6 +7,7 @@ import { Chunk } from '../../../entities/chunk.entity.js';
 export interface ChunkWithScore {
   chunk: Chunk;
   similarityScore: number;
+  sourceUrl: string;
 }
 
 interface ChunkRow {
@@ -16,8 +17,8 @@ interface ChunkRow {
   content: string;
   token_count: number;
   chunk_index: number;
-  metadata: Record<string, unknown>;
   similarity: string;
+  page_url: string;
 }
 
 @Injectable()
@@ -48,6 +49,8 @@ export class VectorSearchService {
       .createQueryBuilder('chunk')
       .select('chunk.*')
       .addSelect('1 - (chunk.embedding <=> :embedding::vector)', 'similarity')
+      .addSelect('page.url', 'page_url')
+      .innerJoin('pages', 'page', 'page.id = chunk.page_id')
       .where('chunk.website_id = :websiteId')
       .andWhere('chunk.embedding IS NOT NULL')
       .orderBy('chunk.embedding <=> :embedding::vector')
@@ -65,9 +68,9 @@ export class VectorSearchService {
           content: r.content,
           token_count: r.token_count,
           chunk_index: r.chunk_index,
-          metadata: r.metadata,
         } as Chunk,
         similarityScore: parseFloat(r.similarity),
+        sourceUrl: r.page_url,
       }));
   }
 }

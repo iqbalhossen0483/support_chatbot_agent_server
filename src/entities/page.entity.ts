@@ -42,9 +42,6 @@ export class Page {
   @Column({ type: 'text', nullable: true })
   clean_text: string | null;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  content_hash: string | null;
-
   @Column({ type: 'enum', enum: PageStatus, default: PageStatus.PENDING })
   status: PageStatus;
 

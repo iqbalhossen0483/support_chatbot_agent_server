@@ -35,7 +35,7 @@ export class ScraperProcessor extends WorkerHost {
 
     try {
       const visited = new Set<string>();
-      const toVisit = [baseUrl];
+      const toVisit = [this.normalizeUrl(baseUrl)];
       const maxPages = this.scraperService.getMaxPages();
       const maxDepth = this.scraperService.getMaxDepth();
       const rateLimit = this.scraperService.getRateLimit();
@@ -52,12 +52,12 @@ export class ScraperProcessor extends WorkerHost {
         const depth = this.getDepth(url, baseUrl);
         if (depth > maxDepth) continue;
 
-        // Skip already scraped pages
+        // Skip already processed pages (any status except ERROR)
         const existingPage = await this.pageRepo.findOne({
           where: { website_id: websiteId, url },
         });
-        if (existingPage && existingPage.status === PageStatus.SCRAPED) {
-          this.logger.debug(`Skipping already scraped: ${url}`);
+        if (existingPage && existingPage.status !== PageStatus.ERROR) {
+          this.logger.debug(`Skipping already processed: ${url}`);
           continue;
         }
 
@@ -88,6 +88,12 @@ export class ScraperProcessor extends WorkerHost {
         await this.pageRepo.save(page);
         pagesScraped++;
 
+        // Update total_pages from actual DB count
+        const totalPages = await this.pageRepo.count({
+          where: { website_id: websiteId },
+        });
+        await this.websiteRepo.update(websiteId, { total_pages: totalPages });
+
         // Immediately push this page to chunking queue
         await this.chunkingQueue.add(
           'chunk',
@@ -117,9 +123,8 @@ export class ScraperProcessor extends WorkerHost {
         }
       }
 
-      // Update website stats
+      // Update last scraped timestamp
       await this.websiteRepo.update(websiteId, {
-        total_pages: pagesScraped,
         last_scraped_at: new Date(),
       });
 
@@ -133,6 +138,12 @@ export class ScraperProcessor extends WorkerHost {
       });
       throw error;
     }
+  }
+
+  private normalizeUrl(url: string): string {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+    return `${parsed.origin}${pathname}`.toLowerCase();
   }
 
   private getDepth(url: string, baseUrl: string): number {
@@ -163,7 +174,7 @@ export class ScraperProcessor extends WorkerHost {
           parsed.hostname === baseHost &&
           ['http:', 'https:'].includes(parsed.protocol)
         ) {
-          const clean = `${parsed.origin}${parsed.pathname}`;
+          const clean = this.normalizeUrl(resolved);
           // Skip early if the URL won't pass validation (static assets, etc.)
           if (this.scraperService.validateUrl(clean)) {
             links.push(clean);

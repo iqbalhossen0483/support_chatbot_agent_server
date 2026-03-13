@@ -35,9 +35,7 @@ export class RagPipelineService {
     const chunks = await this.vectorSearch.search(queryEmbedding, websiteId);
 
     // 3. Extract sources
-    const sources = chunks
-      .map((c) => (c.chunk.metadata?.sourceUrl as string) || '')
-      .filter(Boolean);
+    const sources = [...new Set(chunks.map((c) => c.sourceUrl).filter(Boolean))];
     const chunkIds = chunks.map((c) => c.chunk.id);
 
     // 4. Pre-check confidence (before LLM call)

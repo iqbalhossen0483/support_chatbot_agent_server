@@ -58,10 +58,6 @@ export class ChunkingProcessor extends WorkerHost {
           content: result.text,
           token_count: result.tokenCount,
           chunk_index: result.chunkIndex,
-          metadata: {
-            sourceUrl: result.pageUrl,
-            sourceTitle: result.pageTitle,
-          },
         }),
       );
 

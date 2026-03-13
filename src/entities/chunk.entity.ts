@@ -38,9 +38,6 @@ export class Chunk {
   @Column({ type: 'float', array: true, nullable: true })
   embedding: number[] | null;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, unknown>;
-
   @CreateDateColumn()
   created_at: Date;
 
