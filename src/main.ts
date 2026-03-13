@@ -27,8 +27,6 @@ async function bootstrap() {
   });
 
   const port = config.get<number>('app.port') || 8080;
-  await app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-  });
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap().catch((err) => console.log(err));
