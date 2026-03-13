@@ -1,8 +1,9 @@
 import { BullModule } from '@nestjs/bullmq';
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 import appConfig from './config/app.config.js';
 import bullmqConfig from './config/bullmq.config.js';
@@ -100,4 +101,10 @@ import { WebsiteModule } from './modules/website/website.module.js';
     WebsiteModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  constructor(private readonly dataSource: DataSource) {}
+
+  async onModuleInit() {
+    await this.dataSource.query('CREATE EXTENSION IF NOT EXISTS vector');
+  }
+}

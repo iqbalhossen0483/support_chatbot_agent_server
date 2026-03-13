@@ -32,10 +32,7 @@ export class Chunk {
   @Column({ type: 'int' })
   chunk_index: number;
 
-  // pgvector column — managed via raw SQL in migration
-  // TypeORM doesn't natively support VECTOR type, so we use a string column
-  // and handle it in the migration and repository layer
-  @Column({ type: 'float', array: true, nullable: true })
+  @Column({ type: 'vector', length: 3072, nullable: true })
   embedding: number[] | null;
 
   @CreateDateColumn()

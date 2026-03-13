@@ -32,6 +32,7 @@ export class ApiKeyGuard implements CanActivate {
     });
 
     for (const website of websites) {
+      console.log(apiKey, website.api_key_hash);
       const isMatch = await bcrypt.compare(apiKey, website.api_key_hash);
       if (isMatch) {
         request.website = website;

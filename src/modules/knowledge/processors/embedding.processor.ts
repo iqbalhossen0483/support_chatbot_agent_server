@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { Repository } from 'typeorm';
 import { Chunk } from '../../../entities/chunk.entity.js';
-import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
 import { Page, PageStatus } from '../../../entities/page.entity.js';
+import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
 import { EmbeddingService } from '../services/embedding.service.js';
 
 interface EmbeddingJobData {
@@ -69,13 +69,17 @@ export class EmbeddingProcessor extends WorkerHost {
         );
       }
 
+      // Mark page as fully embedded
+      await this.pageRepo.update(pageId, { status: PageStatus.EMBEDDED });
+
       this.logger.log(
         `Embedding complete for page ${pageId}: ${chunksToEmbed.length} chunks embedded`,
       );
 
-      // Check if all pages for this website are fully processed
+      // Check if all pages for this website are fully embedded
       const pendingPages = await this.pageRepo.count({
         where: [
+          { website_id: websiteId, status: PageStatus.PENDING },
           { website_id: websiteId, status: PageStatus.SCRAPED },
           { website_id: websiteId, status: PageStatus.CHUNKED },
         ],
@@ -87,9 +91,9 @@ export class EmbeddingProcessor extends WorkerHost {
         });
         this.logger.log(`Website ${websiteId} is fully processed and READY`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Embedding generation failed for page ${pageId}: ${error}`,
+        `Embedding generation failed for page ${pageId}: ${String(error)}`,
       );
       await this.websiteRepo.update(websiteId, {
         status: WebsiteStatus.ERROR,

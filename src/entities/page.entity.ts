@@ -17,6 +17,7 @@ export enum PageStatus {
   PENDING = 'pending',
   SCRAPED = 'scraped',
   CHUNKED = 'chunked',
+  EMBEDDED = 'embedded',
   ERROR = 'error',
 }
 
