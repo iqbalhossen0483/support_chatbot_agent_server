@@ -1,4 +1,10 @@
-import { IsString, IsUrl, IsOptional, IsObject, MinLength } from 'class-validator';
+import {
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MinLength,
+} from 'class-validator';
 
 export class CreateWebsiteDto {
   @IsString()

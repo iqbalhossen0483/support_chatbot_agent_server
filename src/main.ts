@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter.js';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
@@ -18,7 +18,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   // CORS
-  const allowedOrigins = config.get<string[]>('app.corsAllowedOrigins') || ['http://localhost:3001'];
+  const allowedOrigins = config.get<string[]>('app.corsAllowedOrigins') || [
+    'http://localhost:3001',
+  ];
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
@@ -29,4 +31,4 @@ async function bootstrap() {
 
   console.log(`Application running on port ${port}`);
 }
-bootstrap();
+bootstrap().catch((err) => console.log(err));

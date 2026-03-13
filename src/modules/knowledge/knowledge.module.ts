@@ -1,16 +1,16 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullModule } from '@nestjs/bullmq';
-import { Website } from '../../entities/website.entity.js';
-import { Page } from '../../entities/page.entity.js';
 import { Chunk } from '../../entities/chunk.entity.js';
-import { KnowledgeController } from './knowledge.controller.js';
-import { KnowledgeService } from './services/knowledge.service.js';
-import { ScraperService } from './services/scraper.service.js';
-import { ChunkingService } from './services/chunking.service.js';
-import { EmbeddingService } from './services/embedding.service.js';
+import { Page } from '../../entities/page.entity.js';
+import { Website } from '../../entities/website.entity.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { RagModule } from '../rag/rag.module.js';
+import { KnowledgeController } from './knowledge.controller.js';
+import { ChunkingService } from './services/chunking.service.js';
+import { EmbeddingService } from './services/embedding.service.js';
+import { KnowledgeService } from './services/knowledge.service.js';
+import { ScraperService } from './services/scraper.service.js';
 
 @Module({
   imports: [
@@ -25,7 +25,12 @@ import { RagModule } from '../rag/rag.module.js';
     forwardRef(() => RagModule),
   ],
   controllers: [KnowledgeController],
-  providers: [KnowledgeService, ScraperService, ChunkingService, EmbeddingService],
+  providers: [
+    KnowledgeService,
+    ScraperService,
+    ChunkingService,
+    EmbeddingService,
+  ],
   exports: [KnowledgeService, EmbeddingService],
 })
 export class KnowledgeModule {}

@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Conversation, ConversationStatus } from '../../entities/conversation.entity.js';
+import {
+  Conversation,
+  ConversationStatus,
+} from '../../entities/conversation.entity.js';
 import { Message, MessageRole } from '../../entities/message.entity.js';
 
 @Injectable()
@@ -78,8 +81,12 @@ export class ChatService {
   ): Promise<void> {
     await this.conversationRepo.update(id, {
       status,
-      ...(status === ConversationStatus.RESOLVED ? { closed_at: new Date() } : {}),
-      ...(status === ConversationStatus.ESCALATED ? { is_escalated: true } : {}),
+      ...(status === ConversationStatus.RESOLVED
+        ? { closed_at: new Date() }
+        : {}),
+      ...(status === ConversationStatus.ESCALATED
+        ? { is_escalated: true }
+        : {}),
     });
   }
 }

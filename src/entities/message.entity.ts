@@ -1,11 +1,11 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  ManyToOne,
+  Entity,
   Index,
   JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Conversation } from './conversation.entity.js';
 
@@ -40,7 +40,11 @@ export class Message {
   @CreateDateColumn()
   created_at: Date;
 
-  @ManyToOne(() => Conversation, (conversation: Conversation) => conversation.messages, { onDelete: 'CASCADE' })
+  @ManyToOne(
+    () => Conversation,
+    (conversation: Conversation) => conversation.messages,
+    { onDelete: 'CASCADE' },
+  )
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
 }

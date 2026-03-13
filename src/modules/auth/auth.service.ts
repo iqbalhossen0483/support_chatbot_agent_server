@@ -1,8 +1,12 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { InjectRepository } from '@nestjs/typeorm';
+import bcrypt from 'bcrypt';
+import { Repository } from 'typeorm';
 import { User, UserRole } from '../../entities/user.entity.js';
 
 @Injectable()
@@ -13,7 +17,12 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(email: string, password: string, name: string, role: UserRole = UserRole.ADMIN) {
+  async register(
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole = UserRole.ADMIN,
+  ) {
     const existing = await this.userRepo.findOne({ where: { email } });
     if (existing) {
       throw new ConflictException('Email already registered');

@@ -34,7 +34,8 @@ export class ScraperService {
     this.maxDepth = config.get<number>('scraper.maxDepth') || 10;
     this.maxPages = config.get<number>('scraper.maxPages') || 5000;
     this.rateLimit = config.get<number>('scraper.rateLimit') || 2;
-    this.userAgent = config.get<string>('scraper.userAgent') || 'SupportAgentBot/1.0';
+    this.userAgent =
+      config.get<string>('scraper.userAgent') || 'SupportAgentBot/1.0';
     this.pageTimeout = config.get<number>('scraper.pageTimeout') || 30000;
   }
 
@@ -90,27 +91,35 @@ export class ScraperService {
   }
 
   private extractText(html: string): string {
-    return html
-      // Remove script/style tags and content
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-      .replace(/<footer[\s\S]*?<\/footer>/gi, '')
-      .replace(/<header[\s\S]*?<\/header>/gi, '')
-      // Remove remaining HTML tags
-      .replace(/<[^>]+>/g, ' ')
-      // Decode common entities
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      // Normalize whitespace
-      .replace(/\s+/g, ' ')
-      .trim();
+    return (
+      html
+        // Remove script/style tags and content
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+        .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+        .replace(/<header[\s\S]*?<\/header>/gi, '')
+        // Remove remaining HTML tags
+        .replace(/<[^>]+>/g, ' ')
+        // Decode common entities
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        // Normalize whitespace
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
   }
 
-  getMaxDepth() { return this.maxDepth; }
-  getMaxPages() { return this.maxPages; }
-  getRateLimit() { return this.rateLimit; }
+  getMaxDepth() {
+    return this.maxDepth;
+  }
+  getMaxPages() {
+    return this.maxPages;
+  }
+  getRateLimit() {
+    return this.rateLimit;
+  }
 }

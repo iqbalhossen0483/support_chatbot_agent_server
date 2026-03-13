@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { VectorSearchService } from './vector-search.service.js';
-import { LlmService } from './llm.service.js';
-import { ConfidenceService } from './confidence.service.js';
 import { Message } from '../../../entities/message.entity.js';
+import { ConfidenceService } from './confidence.service.js';
+import { LlmService } from './llm.service.js';
+import { VectorSearchService } from './vector-search.service.js';
 
 export interface RagResult {
   stream: AsyncGenerator<string>;
@@ -35,9 +35,9 @@ export class RagPipelineService {
     const chunks = await this.vectorSearch.search(queryEmbedding, websiteId);
 
     // 3. Extract sources
-    const sources = chunks.map(
-      (c) => (c.chunk.metadata as Record<string, unknown>)?.sourceUrl as string || '',
-    ).filter(Boolean);
+    const sources = chunks
+      .map((c) => (c.chunk.metadata?.sourceUrl as string) || '')
+      .filter(Boolean);
     const chunkIds = chunks.map((c) => c.chunk.id);
 
     // 4. Pre-check confidence (before LLM call)
@@ -47,8 +47,8 @@ export class RagPipelineService {
       const escalationMessage =
         "I don't have enough information to answer this question accurately. Let me connect you with a support agent who can help.";
 
-      async function* escalationStream() {
-        yield escalationMessage;
+      async function* escalationStream(): AsyncGenerator<string> {
+        yield await Promise.resolve(escalationMessage);
       }
 
       return {
@@ -69,10 +69,10 @@ export class RagPipelineService {
     );
 
     // Wrap the stream to collect full response and evaluate confidence after
-    const self = this;
     let fullResponse = '';
     let evaluated = false;
     let finalConfidence = preCheck;
+    const confidenceService = this.confidence;
 
     async function* wrappedStream(): AsyncGenerator<string> {
       for await (const token of llmStream) {
@@ -81,7 +81,11 @@ export class RagPipelineService {
       }
 
       // Post-stream confidence evaluation
-      finalConfidence = self.confidence.evaluate(userQuery, chunks, fullResponse);
+      finalConfidence = confidenceService.evaluate(
+        userQuery,
+        chunks,
+        fullResponse,
+      );
       evaluated = true;
     }
 
@@ -91,7 +95,9 @@ export class RagPipelineService {
     return {
       stream,
       get confidenceScore() {
-        return evaluated ? finalConfidence.confidenceScore : preCheck.confidenceScore;
+        return evaluated
+          ? finalConfidence.confidenceScore
+          : preCheck.confidenceScore;
       },
       get shouldEscalate() {
         return evaluated ? !finalConfidence.confident : !preCheck.confident;

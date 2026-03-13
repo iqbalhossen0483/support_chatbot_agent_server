@@ -1,13 +1,14 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
+  Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Website } from '../../../entities/website.entity.js';
+import { Request } from 'express';
+import { Repository } from 'typeorm';
+import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
@@ -17,7 +18,7 @@ export class ApiKeyGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     const apiKey = request.headers['x-api-key'] as string;
 
     if (!apiKey) {
@@ -26,7 +27,9 @@ export class ApiKeyGuard implements CanActivate {
 
     // Find website by checking all API key hashes
     // For better performance in production, use a prefix-based lookup
-    const websites = await this.websiteRepo.find({ where: { status: 'ready' as any } });
+    const websites = await this.websiteRepo.find({
+      where: { status: WebsiteStatus.READY },
+    });
 
     for (const website of websites) {
       const isMatch = await bcrypt.compare(apiKey, website.api_key_hash);

@@ -1,7 +1,16 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
-import { EscalationService } from './escalation.service.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { CurrentUserId } from '../../common/decorators/current-user.decorator.js';
 import { EscalationStatus } from '../../entities/escalation.entity.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { EscalationService } from './escalation.service.js';
 
 @Controller('escalations')
 @UseGuards(JwtAuthGuard)
@@ -19,8 +28,11 @@ export class EscalationController {
   }
 
   @Post(':id/claim')
-  async claimEscalation(@Param('id') id: string, @Req() req: any) {
-    return this.escalationService.claimEscalation(id, req.user.id);
+  async claimEscalation(
+    @Param('id') id: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.escalationService.claimEscalation(id, userId);
   }
 
   @Post(':id/resolve')

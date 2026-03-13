@@ -20,7 +20,8 @@ export class ConfidenceService {
   private readonly confidenceThreshold: number;
 
   constructor(config: ConfigService) {
-    this.confidenceThreshold = config.get<number>('rag.confidenceThreshold') || 0.45;
+    this.confidenceThreshold =
+      config.get<number>('rag.confidenceThreshold') || 0.45;
   }
 
   evaluate(
@@ -38,9 +39,10 @@ export class ConfidenceService {
     }
 
     // 2. Check retrieval quality
-    const bestScore = retrievedChunks.length > 0
-      ? Math.max(...retrievedChunks.map((c) => c.similarityScore))
-      : 0;
+    const bestScore =
+      retrievedChunks.length > 0
+        ? Math.max(...retrievedChunks.map((c) => c.similarityScore))
+        : 0;
 
     if (bestScore < this.confidenceThreshold) {
       return {
@@ -62,7 +64,11 @@ export class ConfidenceService {
     }
 
     // 4. Check for explicit human request
-    if (/\b(speak|talk|connect|transfer).*(human|agent|person|someone|representative)\b/i.test(query)) {
+    if (
+      /\b(speak|talk|connect|transfer).*(human|agent|person|someone|representative)\b/i.test(
+        query,
+      )
+    ) {
       return {
         confident: false,
         confidenceScore: bestScore,
@@ -71,7 +77,9 @@ export class ConfidenceService {
     }
 
     // Confident
-    const avgScore = retrievedChunks.reduce((sum, c) => sum + c.similarityScore, 0) / retrievedChunks.length;
+    const avgScore =
+      retrievedChunks.reduce((sum, c) => sum + c.similarityScore, 0) /
+      retrievedChunks.length;
     return {
       confident: true,
       confidenceScore: avgScore,

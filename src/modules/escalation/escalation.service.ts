@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   Escalation,
-  EscalationStatus,
   EscalationPriority,
+  EscalationStatus,
 } from '../../entities/escalation.entity.js';
-import { Message } from '../../entities/message.entity.js';
+import { Message, MessageRole } from '../../entities/message.entity.js';
 
 @Injectable()
 export class EscalationService {
@@ -26,7 +31,9 @@ export class EscalationService {
     conversationHistory: Message[],
   ): Promise<Escalation> {
     // Build summary from conversation
-    const userMessages = conversationHistory.filter((m) => m.role === 'user');
+    const userMessages = conversationHistory.filter(
+      (m) => m.role === MessageRole.USER,
+    );
     const lastUserMessage = userMessages[userMessages.length - 1];
     const summary = `User asked: "${lastUserMessage?.content || 'N/A'}". Escalation trigger: ${trigger}.`;
 
@@ -52,7 +59,9 @@ export class EscalationService {
     });
 
     const saved = await this.escalationRepo.save(escalation);
-    this.logger.log(`Escalation created: ${saved.id} for conversation ${conversationId}`);
+    this.logger.log(
+      `Escalation created: ${saved.id} for conversation ${conversationId}`,
+    );
     return saved;
   }
 
@@ -94,8 +103,14 @@ export class EscalationService {
   ): Promise<Escalation> {
     const escalation = await this.getEscalation(id);
 
-    if (![EscalationStatus.CLAIMED, EscalationStatus.IN_PROGRESS].includes(escalation.status)) {
-      throw new BadRequestException('Escalation must be claimed or in progress to resolve');
+    if (
+      ![EscalationStatus.CLAIMED, EscalationStatus.IN_PROGRESS].includes(
+        escalation.status,
+      )
+    ) {
+      throw new BadRequestException(
+        'Escalation must be claimed or in progress to resolve',
+      );
     }
 
     escalation.status = EscalationStatus.RESOLVED;

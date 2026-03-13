@@ -1,19 +1,19 @@
+import { Logger } from '@nestjs/common';
 import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { ChatService } from './chat.service.js';
-import { RagPipelineService } from '../rag/services/rag-pipeline.service.js';
-import { EscalationService } from '../escalation/escalation.service.js';
-import { MessageRole } from '../../entities/message.entity.js';
 import { ConversationStatus } from '../../entities/conversation.entity.js';
+import { MessageRole } from '../../entities/message.entity.js';
+import { EscalationService } from '../escalation/escalation.service.js';
+import { RagPipelineService } from '../rag/services/rag-pipeline.service.js';
+import { ChatService } from './chat.service.js';
 
 interface VisitorMessagePayload {
   conversationId: string;
@@ -41,11 +41,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly escalationService: EscalationService,
   ) {}
 
-  async handleConnection(client: Socket) {
+  handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
   }
 
-  async handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
@@ -55,7 +55,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { conversationId: string },
   ) {
     await client.join(`conversation:${data.conversationId}`);
-    this.logger.log(`Client ${client.id} joined conversation ${data.conversationId}`);
+    this.logger.log(
+      `Client ${client.id} joined conversation ${data.conversationId}`,
+    );
   }
 
   @SubscribeMessage('visitor:message')
@@ -67,10 +69,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       // Save user message
-      await this.chatService.addMessage(conversationId, MessageRole.USER, content);
+      await this.chatService.addMessage(
+        conversationId,
+        MessageRole.USER,
+        content,
+      );
 
       // Get conversation for context
-      const conversation = await this.chatService.getConversation(conversationId);
+      const conversation =
+        await this.chatService.getConversation(conversationId);
 
       // If escalated, forward to agent room
       if (conversation.is_escalated) {
@@ -109,12 +116,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       // Emit metadata
-      this.server
-        .to(`conversation:${conversationId}`)
-        .emit('ai:metadata', {
-          confidenceScore: result.confidenceScore,
-          sources: result.sources,
-        });
+      this.server.to(`conversation:${conversationId}`).emit('ai:metadata', {
+        confidenceScore: result.confidenceScore,
+        sources: result.sources,
+      });
 
       // Check for escalation
       if (result.shouldEscalate) {
@@ -130,12 +135,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ConversationStatus.ESCALATED,
         );
 
-        this.server
-          .to(`conversation:${conversationId}`)
-          .emit('ai:escalation', {
-            escalationId: escalation.id,
-            message: 'A support agent will be with you shortly.',
-          });
+        this.server.to(`conversation:${conversationId}`).emit('ai:escalation', {
+          escalationId: escalation.id,
+          message: 'A support agent will be with you shortly.',
+        });
 
         // Notify agents
         this.server.emit('escalation:new', {
@@ -164,7 +167,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { escalationId, content } = data;
 
     try {
-      const escalation = await this.escalationService.getEscalation(escalationId);
+      const escalation =
+        await this.escalationService.getEscalation(escalationId);
       const conversationId = escalation.conversation_id;
 
       // Save agent message

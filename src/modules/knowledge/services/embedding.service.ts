@@ -19,7 +19,9 @@ export class EmbeddingService {
 
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
-      this.logger.log(`Generating embeddings for batch ${i / batchSize + 1} (${batch.length} texts)`);
+      this.logger.log(
+        `Generating embeddings for batch ${i / batchSize + 1} (${batch.length} texts)`,
+      );
 
       let retries = 0;
       const maxRetries = 3;
@@ -33,7 +35,9 @@ export class EmbeddingService {
           retries++;
           if (retries >= maxRetries) throw error;
           const delay = Math.pow(2, retries) * 1000;
-          this.logger.warn(`Embedding retry ${retries}/${maxRetries}, waiting ${delay}ms`);
+          this.logger.warn(
+            `Embedding retry ${retries}/${maxRetries}, waiting ${delay}ms`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }

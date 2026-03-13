@@ -5,5 +5,7 @@ export default registerAs('app', () => ({
   env: process.env.APP_ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'change-me-in-production',
   jwtExpiry: process.env.JWT_EXPIRY || '24h',
-  corsAllowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3001'],
+  corsAllowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',') || [
+    'http://localhost:3001',
+  ],
 }));

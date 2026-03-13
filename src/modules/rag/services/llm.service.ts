@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Message } from '../../../entities/message.entity.js';
-import { ChunkWithScore } from './vector-search.service.js';
 import { buildSystemPrompt } from '../prompts/system-prompt.js';
+import { ChunkWithScore } from './vector-search.service.js';
 
 @Injectable()
 export class LlmService {
@@ -14,7 +14,8 @@ export class LlmService {
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('gemini.apiKey') || '';
     this.model = config.get<string>('gemini.model') || 'gemini-2.0-flash';
-    this.embeddingModel = config.get<string>('gemini.embeddingModel') || 'text-embedding-004';
+    this.embeddingModel =
+      config.get<string>('gemini.embeddingModel') || 'text-embedding-004';
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
@@ -34,7 +35,7 @@ export class LlmService {
       throw new Error(`Embedding API error: ${response.status} ${error}`);
     }
 
-    const data = await response.json() as { embedding: { values: number[] } };
+    const data = (await response.json()) as { embedding: { values: number[] } };
     return data.embedding.values;
   }
 
@@ -57,7 +58,9 @@ export class LlmService {
       throw new Error(`Batch embedding API error: ${response.status} ${error}`);
     }
 
-    const data = await response.json() as { embeddings: { values: number[] }[] };
+    const data = (await response.json()) as {
+      embeddings: { values: number[] }[];
+    };
     return data.embeddings.map((e) => e.values);
   }
 
@@ -67,7 +70,11 @@ export class LlmService {
     conversationHistory: Message[],
     businessName: string = 'our company',
   ): AsyncGenerator<string> {
-    const systemPrompt = buildSystemPrompt(businessName, context, conversationHistory);
+    const systemPrompt = buildSystemPrompt(
+      businessName,
+      context,
+      conversationHistory,
+    );
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 

@@ -57,7 +57,10 @@ export class ChunkingService {
     for (const sentence of sentences) {
       const sentenceTokens = this.encode(sentence);
 
-      if (currentTokens.length + sentenceTokens.length > effectiveMaxSize && currentTokens.length >= this.chunkSizeMin - prefixTokens) {
+      if (
+        currentTokens.length + sentenceTokens.length > effectiveMaxSize &&
+        currentTokens.length >= this.chunkSizeMin - prefixTokens
+      ) {
         // Emit current chunk
         const chunkText = metadataPrefix + currentSentences.join(' ');
         chunks.push({
@@ -70,7 +73,10 @@ export class ChunkingService {
         chunkIndex++;
 
         // Apply overlap — keep last N tokens worth of sentences
-        const overlapResult = this.applyOverlap(currentSentences, currentTokens);
+        const overlapResult = this.applyOverlap(
+          currentSentences,
+          currentTokens,
+        );
         currentSentences = overlapResult.sentences;
         currentTokens = overlapResult.tokens;
       }
@@ -109,10 +115,10 @@ export class ChunkingService {
     const overlapSentences: string[] = [];
 
     for (let i = sentences.length - 1; i >= 0; i--) {
-      const sentenceTokens = this.encode(sentences[i]!);
+      const sentenceTokens = this.encode(sentences[i]);
       if (overlapTokenCount + sentenceTokens.length > this.chunkOverlap) break;
       overlapTokenCount += sentenceTokens.length;
-      overlapSentences.unshift(sentences[i]!);
+      overlapSentences.unshift(sentences[i]);
     }
 
     return {
