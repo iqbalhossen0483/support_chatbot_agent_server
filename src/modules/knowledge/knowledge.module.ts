@@ -7,6 +7,10 @@ import { Website } from '../../entities/website.entity.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { RagModule } from '../rag/rag.module.js';
 import { KnowledgeController } from './knowledge.controller.js';
+import { ChunkingProcessor } from './processors/chunking.processor.js';
+import { EmbeddingProcessor } from './processors/embedding.processor.js';
+import { RescrapeProcessor } from './processors/rescrape.processor.js';
+import { ScraperProcessor } from './processors/scraper.processor.js';
 import { ChunkingService } from './services/chunking.service.js';
 import { EmbeddingService } from './services/embedding.service.js';
 import { KnowledgeService } from './services/knowledge.service.js';
@@ -30,6 +34,10 @@ import { ScraperService } from './services/scraper.service.js';
     ScraperService,
     ChunkingService,
     EmbeddingService,
+    ScraperProcessor,
+    ChunkingProcessor,
+    EmbeddingProcessor,
+    RescrapeProcessor,
   ],
   exports: [KnowledgeService, EmbeddingService],
 })
