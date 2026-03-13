@@ -1,8 +1,8 @@
-import { IsString, IsUUID, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsObject } from 'class-validator';
 
 export class CreateConversationDto {
-  @IsUUID()
-  websiteId!: string;
+  @IsInt()
+  websiteId!: number;
 
   @IsString()
   sessionId!: string;

@@ -8,7 +8,7 @@ import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
 import { ScraperService } from '../services/scraper.service.js';
 
 interface ScrapeJobData {
-  websiteId: string;
+  websiteId: number;
   baseUrl: string;
   scrapeConfig: Record<string, unknown>;
 }
@@ -52,13 +52,20 @@ export class ScraperProcessor extends WorkerHost {
         const depth = this.getDepth(url, baseUrl);
         if (depth > maxDepth) continue;
 
+        // Skip already scraped pages
+        const existingPage = await this.pageRepo.findOne({
+          where: { website_id: websiteId, url },
+        });
+        if (existingPage && existingPage.status === PageStatus.SCRAPED) {
+          this.logger.debug(`Skipping already scraped: ${url}`);
+          continue;
+        }
+
         const result = await this.scraperService.scrapeUrl(url);
         if (!result) continue;
 
         // Save page
-        let page = await this.pageRepo.findOne({
-          where: { website_id: websiteId, url },
-        });
+        let page = existingPage;
 
         if (page) {
           page.title = result.title;
@@ -80,6 +87,18 @@ export class ScraperProcessor extends WorkerHost {
 
         await this.pageRepo.save(page);
         pagesScraped++;
+
+        // Immediately push this page to chunking queue
+        await this.chunkingQueue.add(
+          'chunk',
+          { websiteId, pageId: page.id },
+          {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: { age: 86400 },
+            removeOnFail: { age: 604800 },
+          },
+        );
 
         // Update progress
         await job.updateProgress(Math.round((pagesScraped / maxPages) * 100));
@@ -106,18 +125,6 @@ export class ScraperProcessor extends WorkerHost {
 
       this.logger.log(
         `Scrape complete for ${websiteId}: ${pagesScraped} pages`,
-      );
-
-      // Enqueue chunking job
-      await this.chunkingQueue.add(
-        'chunk',
-        { websiteId },
-        {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
-          removeOnComplete: { age: 86400 },
-          removeOnFail: { age: 604800 },
-        },
       );
     } catch (error) {
       this.logger.error(`Scrape failed for ${websiteId}: ${error}`);
@@ -157,7 +164,10 @@ export class ScraperProcessor extends WorkerHost {
           ['http:', 'https:'].includes(parsed.protocol)
         ) {
           const clean = `${parsed.origin}${parsed.pathname}`;
-          links.push(clean);
+          // Skip early if the URL won't pass validation (static assets, etc.)
+          if (this.scraperService.validateUrl(clean)) {
+            links.push(clean);
+          }
         }
       } catch {
         // Skip invalid URLs

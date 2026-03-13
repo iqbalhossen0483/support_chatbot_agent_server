@@ -26,7 +26,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = config.get<number>('app.port') || 3000;
+  const port = config.get<number>('app.port') || 8080;
   await app.listen(port);
 
   console.log(`Application running on port ${port}`);

@@ -1,5 +1,10 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Queue } from 'bullmq';
@@ -39,6 +44,15 @@ export class KnowledgeService {
       api_key_hash: apiKeyHash,
       status: WebsiteStatus.SCRAPING,
     });
+
+    const existing = await this.websiteRepo.findOne({
+      where: { base_url: baseUrl },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `Website with URL "${baseUrl}" is already registered`,
+      );
+    }
 
     const saved = await this.websiteRepo.save(website);
 
@@ -86,13 +100,13 @@ export class KnowledgeService {
     });
   }
 
-  async getWebsite(id: string) {
+  async getWebsite(id: number) {
     const website = await this.websiteRepo.findOne({ where: { id } });
     if (!website) throw new NotFoundException('Website not found');
     return website;
   }
 
-  async triggerRescrape(id: string) {
+  async triggerRescrape(id: number) {
     const website = await this.getWebsite(id);
 
     await this.websiteRepo.update(id, { status: WebsiteStatus.SCRAPING });
@@ -114,14 +128,14 @@ export class KnowledgeService {
     return { message: 'Re-scrape initiated' };
   }
 
-  async deleteWebsite(id: string) {
+  async deleteWebsite(id: number) {
     const website = await this.getWebsite(id);
     await this.websiteRepo.remove(website);
     this.logger.log(`Website deleted: ${id}`);
     return { message: 'Website and all associated data deleted' };
   }
 
-  async getPages(websiteId: string) {
+  async getPages(websiteId: number) {
     return this.pageRepo.find({
       where: { website_id: websiteId },
       select: [
@@ -137,7 +151,7 @@ export class KnowledgeService {
     });
   }
 
-  async getStats(websiteId: string) {
+  async getStats(websiteId: number) {
     const website = await this.getWebsite(websiteId);
     const pageCount = await this.pageRepo.count({
       where: { website_id: websiteId },

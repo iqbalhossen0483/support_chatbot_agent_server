@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import puppeteer, { Browser } from 'puppeteer';
 
 export interface ScrapedPage {
   url: string;
@@ -8,7 +9,48 @@ export interface ScrapedPage {
   html: string;
 }
 
-// Private IP ranges to block (SSRF protection)
+// File extensions that indicate static assets with no useful content
+const STATIC_ASSET_EXTENSIONS = new Set([
+  '.js',
+  '.css',
+  '.map',
+  '.json',
+  '.xml',
+  '.rss',
+  '.atom',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg',
+  '.ico',
+  '.webp',
+  '.avif',
+  '.bmp',
+  '.tiff',
+  '.mp4',
+  '.webm',
+  '.mp3',
+  '.ogg',
+  '.wav',
+  '.flac',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.otf',
+  '.pdf',
+  '.zip',
+  '.tar',
+  '.gz',
+  '.rar',
+  '.7z',
+  '.exe',
+  '.dmg',
+  '.apk',
+  '.msi',
+]);
+
 const PRIVATE_IP_PATTERNS = [
   /^127\./,
   /^10\./,
@@ -22,21 +64,41 @@ const PRIVATE_IP_PATTERNS = [
 ];
 
 @Injectable()
-export class ScraperService {
+export class ScraperService implements OnModuleDestroy {
   private readonly logger = new Logger(ScraperService.name);
   private readonly maxDepth: number;
   private readonly maxPages: number;
   private readonly rateLimit: number;
-  private readonly userAgent: string;
   private readonly pageTimeout: number;
+  private browser: Browser | null = null;
 
   constructor(config: ConfigService) {
     this.maxDepth = config.get<number>('scraper.maxDepth') || 10;
     this.maxPages = config.get<number>('scraper.maxPages') || 5000;
     this.rateLimit = config.get<number>('scraper.rateLimit') || 2;
-    this.userAgent =
-      config.get<string>('scraper.userAgent') || 'SupportAgentBot/1.0';
     this.pageTimeout = config.get<number>('scraper.pageTimeout') || 30000;
+  }
+
+  private async getBrowser(): Promise<Browser> {
+    if (!this.browser || !this.browser.connected) {
+      this.browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
+      });
+    }
+    return this.browser;
+  }
+
+  async onModuleDestroy() {
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+    }
   }
 
   validateUrl(url: string): boolean {
@@ -50,67 +112,117 @@ export class ScraperService {
       }
       if (hostname === 'localhost') return false;
 
+      // Skip static assets and framework bundles (no useful content)
+      if (this.isStaticAsset(parsed)) return false;
+
       return true;
     } catch {
       return false;
     }
   }
 
-  // Placeholder — full Puppeteer/Cheerio implementation will go in the worker
+  private isStaticAsset(parsed: URL): boolean {
+    const pathname = parsed.pathname.toLowerCase();
+    const segments = pathname.split('/').filter(Boolean);
+
+    // Skip any URL with a path segment starting with _ (e.g. /_nuxt/, /_next/, /_app/)
+    if (segments.some((seg) => seg.startsWith('_'))) return true;
+
+    // Skip sitemap paths
+    if (segments.some((seg) => seg.startsWith('sitemap'))) return true;
+
+    // Check file extension
+    const lastSegment = segments[segments.length - 1] || '';
+    const dotIndex = lastSegment.lastIndexOf('.');
+    if (dotIndex !== -1) {
+      const ext = lastSegment.slice(dotIndex);
+      if (STATIC_ASSET_EXTENSIONS.has(ext)) return true;
+    }
+
+    return false;
+  }
+
   async scrapeUrl(url: string): Promise<ScrapedPage | null> {
     if (!this.validateUrl(url)) {
       this.logger.warn(`Blocked URL: ${url}`);
       return null;
     }
 
+    const browser = await this.getBrowser();
+    const page = await browser.newPage();
+
     try {
-      const response = await fetch(url, {
-        headers: { 'User-Agent': this.userAgent },
-        signal: AbortSignal.timeout(this.pageTimeout),
+      // Block unnecessary resources — we only want text content
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const type = req.resourceType();
+        if (['image', 'stylesheet', 'font', 'media', 'other'].includes(type)) {
+          void req.abort();
+        } else {
+          void req.continue();
+        }
       });
 
-      if (!response.ok) {
-        this.logger.warn(`HTTP ${response.status} for ${url}`);
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: this.pageTimeout,
+      });
+
+      // Extract title
+      const title = await page.title();
+
+      // Get raw HTML for link extraction
+      const html = (await page.content()).replace(/\0/g, '');
+
+      // Extract clean text content from the page
+      const content = await page.evaluate(() => {
+        // Remove unwanted elements
+        const selectorsToRemove = [
+          'script',
+          'style',
+          'noscript',
+          'iframe',
+          'nav',
+          'footer',
+          'header',
+          '[role="navigation"]',
+          '[role="banner"]',
+          '[aria-hidden="true"]',
+          '.cookie-banner',
+          '.popup',
+          '.modal',
+          '.advertisement',
+          '.ads',
+          '.sidebar',
+        ];
+
+        for (const selector of selectorsToRemove) {
+          document.querySelectorAll(selector).forEach((el) => el.remove());
+        }
+
+        // Get text from body
+        const body = document.querySelector('body');
+        if (!body) return '';
+
+        return body.innerText
+          .replace(/\t/g, ' ')
+          .replace(/\n{3,}/g, '\n\n')
+          .replace(/[ ]{2,}/g, ' ')
+          .trim();
+      });
+
+      if (!content || content.length < 50) {
+        this.logger.warn(`Insufficient content from ${url}`);
         return null;
       }
 
-      const html = await response.text();
-      const title = this.extractTitle(html);
-      const content = this.extractText(html);
-
-      return { url, title, content, html };
+      return { url, title: title.replace(/\0/g, ''), content, html };
     } catch (error) {
       this.logger.error(`Failed to scrape ${url}: ${error}`);
       return null;
+    } finally {
+      await page.close();
     }
-  }
-
-  private extractTitle(html: string): string {
-    const match = html.match(/<title[^>]*>(.*?)<\/title>/i);
-    return match?.[1]?.trim() || '';
-  }
-
-  private extractText(html: string): string {
-    return (
-      html
-        // Remove script/style tags and content
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
-        .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-        .replace(/<footer[\s\S]*?<\/footer>/gi, '')
-        .replace(/<header[\s\S]*?<\/header>/gi, '')
-        // Remove remaining HTML tags
-        .replace(/<[^>]+>/g, ' ')
-        // Decode common entities
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        // Normalize whitespace
-        .replace(/\s+/g, ' ')
-        .trim()
-    );
   }
 
   getMaxDepth() {

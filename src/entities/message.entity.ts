@@ -19,11 +19,11 @@ export enum MessageRole {
 @Entity('messages')
 @Index(['conversation_id', 'created_at'])
 export class Message {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: 'uuid' })
-  conversation_id: string;
+  @Column({ type: 'int' })
+  conversation_id: number;
 
   @Column({ type: 'enum', enum: MessageRole })
   role: MessageRole;

@@ -10,9 +10,9 @@ export interface ChunkWithScore {
 }
 
 interface ChunkRow {
-  id: string;
-  page_id: string;
-  website_id: string;
+  id: number;
+  page_id: number;
+  website_id: number;
   content: string;
   token_count: number;
   chunk_index: number;
@@ -38,7 +38,7 @@ export class VectorSearchService {
 
   async search(
     queryEmbedding: number[],
-    websiteId: string,
+    websiteId: number,
     topK?: number,
   ): Promise<ChunkWithScore[]> {
     const limit = topK || this.topK;

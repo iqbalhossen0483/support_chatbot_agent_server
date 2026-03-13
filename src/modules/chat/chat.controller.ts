@@ -1,6 +1,14 @@
-import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
-import { ChatService } from './chat.service.js';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard.js';
+import { ChatService } from './chat.service.js';
 import { CreateConversationDto } from './dto/create-conversation.dto.js';
 
 @Controller('chat')
@@ -23,7 +31,7 @@ export class ChatController {
   }
 
   @Get('conversations/:id')
-  async getConversation(@Param('id') id: string) {
+  async getConversation(@Param('id', ParseIntPipe) id: number) {
     return this.chatService.getConversation(id);
   }
 }

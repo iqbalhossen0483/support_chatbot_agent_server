@@ -25,8 +25,8 @@ export class EscalationService {
   ) {}
 
   async createEscalation(
-    conversationId: string,
-    websiteId: string,
+    conversationId: number,
+    websiteId: number,
     trigger: string,
     conversationHistory: Message[],
   ): Promise<Escalation> {
@@ -65,7 +65,7 @@ export class EscalationService {
     return saved;
   }
 
-  async getEscalation(id: string): Promise<Escalation> {
+  async getEscalation(id: number): Promise<Escalation> {
     const escalation = await this.escalationRepo.findOne({
       where: { id },
       relations: ['conversation'],
@@ -83,7 +83,7 @@ export class EscalationService {
     });
   }
 
-  async claimEscalation(id: string, agentId: string): Promise<Escalation> {
+  async claimEscalation(id: number, agentId: number): Promise<Escalation> {
     const escalation = await this.getEscalation(id);
 
     if (escalation.status !== EscalationStatus.PENDING) {
@@ -98,7 +98,7 @@ export class EscalationService {
   }
 
   async resolveEscalation(
-    id: string,
+    id: number,
     resolutionNotes?: string,
   ): Promise<Escalation> {
     const escalation = await this.getEscalation(id);

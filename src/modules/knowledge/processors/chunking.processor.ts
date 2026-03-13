@@ -9,7 +9,8 @@ import { Website } from '../../../entities/website.entity.js';
 import { ChunkingService } from '../services/chunking.service.js';
 
 interface ChunkingJobData {
-  websiteId: string;
+  websiteId: number;
+  pageId: number;
 }
 
 @Processor('chunking-queue')
@@ -31,67 +32,58 @@ export class ChunkingProcessor extends WorkerHost {
   }
 
   async process(job: Job<ChunkingJobData>): Promise<void> {
-    const { websiteId } = job.data;
-    this.logger.log(`Starting chunking for website ${websiteId}`);
+    const { websiteId, pageId } = job.data;
+    this.logger.log(`Starting chunking for page ${pageId}`);
 
     try {
-      // Delete old chunks for this website
-      await this.chunkRepo.delete({ website_id: websiteId });
-
-      // Get all scraped pages
-      const pages = await this.pageRepo.find({
-        where: { website_id: websiteId, status: PageStatus.SCRAPED },
-      });
-
-      let totalChunks = 0;
-
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
-        if (!page.clean_text) continue;
-
-        const chunkResults = await this.chunkingService.chunkContent(
-          page.clean_text,
-          page.url,
-          page.title || '',
-        );
-
-        const chunkEntities = chunkResults.map((result) =>
-          this.chunkRepo.create({
-            page_id: page.id,
-            website_id: websiteId,
-            content: result.text,
-            token_count: result.tokenCount,
-            chunk_index: result.chunkIndex,
-            metadata: {
-              sourceUrl: result.pageUrl,
-              sourceTitle: result.pageTitle,
-            },
-          }),
-        );
-
-        await this.chunkRepo.save(chunkEntities);
-        totalChunks += chunkEntities.length;
-
-        // Update page status
-        await this.pageRepo.update(page.id, { status: PageStatus.CHUNKED });
-
-        // Update progress
-        await job.updateProgress(Math.round(((i + 1) / pages.length) * 100));
+      const page = await this.pageRepo.findOne({ where: { id: pageId } });
+      if (!page || !page.clean_text) {
+        this.logger.warn(`Page ${pageId} not found or has no content`);
+        return;
       }
 
-      // Update website stats
-      await this.websiteRepo.update(websiteId, {
-        total_chunks: totalChunks,
-      });
+      // Delete old chunks for this page
+      await this.chunkRepo.delete({ page_id: pageId });
 
-      this.logger.log(
-        `Chunking complete for ${websiteId}: ${totalChunks} chunks from ${pages.length} pages`,
+      const chunkResults = await this.chunkingService.chunkContent(
+        page.clean_text,
+        page.url,
+        page.title || '',
       );
 
-      // Enqueue embedding job
+      const chunkEntities = chunkResults.map((result) =>
+        this.chunkRepo.create({
+          page_id: pageId,
+          website_id: websiteId,
+          content: result.text,
+          token_count: result.tokenCount,
+          chunk_index: result.chunkIndex,
+          metadata: {
+            sourceUrl: result.pageUrl,
+            sourceTitle: result.pageTitle,
+          },
+        }),
+      );
+
+      await this.chunkRepo.save(chunkEntities);
+
+      // Update page status
+      await this.pageRepo.update(pageId, { status: PageStatus.CHUNKED });
+
+      // Update website chunk count
+      const totalChunks = await this.chunkRepo.count({
+        where: { website_id: websiteId },
+      });
+      await this.websiteRepo.update(websiteId, { total_chunks: totalChunks });
+
+      this.logger.log(
+        `Chunking complete for page ${pageId}: ${chunkEntities.length} chunks`,
+      );
+
+      // Immediately push to embedding queue
       await this.embeddingQueue.add(
         'embed',
-        { websiteId },
+        { websiteId, pageId },
         {
           attempts: 3,
           backoff: { type: 'exponential', delay: 5000 },
@@ -100,7 +92,7 @@ export class ChunkingProcessor extends WorkerHost {
         },
       );
     } catch (error) {
-      this.logger.error(`Chunking failed for ${websiteId}: ${error}`);
+      this.logger.error(`Chunking failed for page ${pageId}: ${error}`);
       throw error;
     }
   }

@@ -25,11 +25,11 @@ export enum ConversationStatus {
 @Index(['website_id', 'status'])
 @Index(['session_id'])
 export class Conversation {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: 'uuid' })
-  website_id: string;
+  @Column({ type: 'int' })
+  website_id: number;
 
   @Column({ type: 'varchar', length: 255 })
   session_id: string;

@@ -10,7 +10,7 @@ export class WebsiteService {
     private readonly websiteRepo: Repository<Website>,
   ) {}
 
-  async findById(id: string): Promise<Website> {
+  async findById(id: number): Promise<Website> {
     const website = await this.websiteRepo.findOne({ where: { id } });
     if (!website) throw new NotFoundException('Website not found');
     return website;

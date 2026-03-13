@@ -19,8 +19,8 @@ export enum WebsiteStatus {
 
 @Entity('websites')
 export class Website {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ type: 'varchar', length: 255 })
   name: string;

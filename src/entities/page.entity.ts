@@ -24,11 +24,11 @@ export enum PageStatus {
 @Unique(['website_id', 'url'])
 @Index(['website_id', 'status'])
 export class Page {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: 'uuid' })
-  website_id: string;
+  @Column({ type: 'int' })
+  website_id: number;
 
   @Column({ type: 'varchar', length: 2048 })
   url: string;

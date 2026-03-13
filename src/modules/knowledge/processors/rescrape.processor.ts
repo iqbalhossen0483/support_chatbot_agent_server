@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
 
 interface RescrapeJobData {
-  websiteId: string;
+  websiteId: number;
 }
 
 @Processor('rescrape-queue')

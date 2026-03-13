@@ -54,7 +54,7 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async validateUserById(userId: string): Promise<User | null> {
+  async validateUserById(userId: number): Promise<User | null> {
     return this.userRepo.findOne({ where: { id: userId, is_active: true } });
   }
 

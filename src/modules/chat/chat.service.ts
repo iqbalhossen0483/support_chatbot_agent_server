@@ -17,7 +17,7 @@ export class ChatService {
   ) {}
 
   async createConversation(
-    websiteId: string,
+    websiteId: number,
     sessionId: string,
     visitorMetadata: Record<string, unknown> = {},
   ): Promise<Conversation> {
@@ -30,7 +30,7 @@ export class ChatService {
     return this.conversationRepo.save(conversation);
   }
 
-  async getConversation(id: string): Promise<Conversation> {
+  async getConversation(id: number): Promise<Conversation> {
     const conversation = await this.conversationRepo.findOne({
       where: { id },
       relations: ['messages'],
@@ -43,7 +43,7 @@ export class ChatService {
   }
 
   async addMessage(
-    conversationId: string,
+    conversationId: number,
     role: MessageRole,
     content: string,
     confidenceScore?: number | null,
@@ -68,7 +68,7 @@ export class ChatService {
     return saved;
   }
 
-  async getConversationMessages(conversationId: string): Promise<Message[]> {
+  async getConversationMessages(conversationId: number): Promise<Message[]> {
     return this.messageRepo.find({
       where: { conversation_id: conversationId },
       order: { created_at: 'ASC' },
@@ -76,7 +76,7 @@ export class ChatService {
   }
 
   async updateConversationStatus(
-    id: string,
+    id: number,
     status: ConversationStatus,
   ): Promise<void> {
     await this.conversationRepo.update(id, {

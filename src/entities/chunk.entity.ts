@@ -14,14 +14,14 @@ import { Website } from './website.entity.js';
 @Index(['website_id'])
 @Index(['page_id'])
 export class Chunk {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: 'uuid' })
-  page_id: string;
+  @Column({ type: 'int' })
+  page_id: number;
 
-  @Column({ type: 'uuid' })
-  website_id: string;
+  @Column({ type: 'int' })
+  website_id: number;
 
   @Column({ type: 'text' })
   content: string;

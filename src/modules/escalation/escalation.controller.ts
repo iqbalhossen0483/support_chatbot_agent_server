@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   UseGuards,
@@ -23,21 +24,21 @@ export class EscalationController {
   }
 
   @Get(':id')
-  async getEscalation(@Param('id') id: string) {
+  async getEscalation(@Param('id', ParseIntPipe) id: number) {
     return this.escalationService.getEscalation(id);
   }
 
   @Post(':id/claim')
   async claimEscalation(
-    @Param('id') id: string,
-    @CurrentUserId() userId: string,
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUserId() userId: number,
   ) {
     return this.escalationService.claimEscalation(id, userId);
   }
 
   @Post(':id/resolve')
   async resolveEscalation(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body('resolutionNotes') resolutionNotes?: string,
   ) {
     return this.escalationService.resolveEscalation(id, resolutionNotes);

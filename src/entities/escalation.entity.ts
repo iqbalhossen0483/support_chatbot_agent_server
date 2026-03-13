@@ -28,11 +28,11 @@ export enum EscalationPriority {
 @Entity('escalations')
 @Index(['status', 'priority', 'created_at'])
 export class Escalation {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: 'uuid', unique: true })
-  conversation_id: string;
+  @Column({ type: 'int', unique: true })
+  conversation_id: number;
 
   @Column({
     type: 'enum',
@@ -57,8 +57,8 @@ export class Escalation {
   @Column({ type: 'jsonb' })
   context_data: Record<string, unknown>;
 
-  @Column({ type: 'uuid', nullable: true })
-  claimed_by: string | null;
+  @Column({ type: 'int', nullable: true })
+  claimed_by: number | null;
 
   @Column({ type: 'timestamp', nullable: true })
   claimed_at: Date | null;

@@ -16,12 +16,12 @@ import { RagPipelineService } from '../rag/services/rag-pipeline.service.js';
 import { ChatService } from './chat.service.js';
 
 interface VisitorMessagePayload {
-  conversationId: string;
+  conversationId: number;
   content: string;
 }
 
 interface AgentMessagePayload {
-  escalationId: string;
+  escalationId: number;
   content: string;
 }
 
@@ -52,7 +52,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join:conversation')
   async handleJoinConversation(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { conversationId: string },
+    @MessageBody() data: { conversationId: number },
   ) {
     await client.join(`conversation:${data.conversationId}`);
     this.logger.log(

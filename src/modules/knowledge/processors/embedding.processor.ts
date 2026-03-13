@@ -5,10 +5,12 @@ import { Job } from 'bullmq';
 import { Repository } from 'typeorm';
 import { Chunk } from '../../../entities/chunk.entity.js';
 import { Website, WebsiteStatus } from '../../../entities/website.entity.js';
+import { Page, PageStatus } from '../../../entities/page.entity.js';
 import { EmbeddingService } from '../services/embedding.service.js';
 
 interface EmbeddingJobData {
-  websiteId: string;
+  websiteId: number;
+  pageId: number;
 }
 
 @Processor('embedding-queue')
@@ -22,25 +24,27 @@ export class EmbeddingProcessor extends WorkerHost {
     private readonly chunkRepo: Repository<Chunk>,
     @InjectRepository(Website)
     private readonly websiteRepo: Repository<Website>,
+    @InjectRepository(Page)
+    private readonly pageRepo: Repository<Page>,
   ) {
     super();
   }
 
   async process(job: Job<EmbeddingJobData>): Promise<void> {
-    const { websiteId } = job.data;
-    this.logger.log(`Starting embedding generation for website ${websiteId}`);
+    const { websiteId, pageId } = job.data;
+    this.logger.log(`Starting embedding for page ${pageId}`);
 
     try {
-      // Get all chunks without embeddings
+      // Get chunks for this page without embeddings
       const chunks = await this.chunkRepo.find({
-        where: { website_id: websiteId },
+        where: { page_id: pageId },
         order: { chunk_index: 'ASC' },
       });
 
       const chunksToEmbed = chunks.filter((c) => !c.embedding);
 
       this.logger.log(
-        `Generating embeddings for ${chunksToEmbed.length} chunks`,
+        `Generating embeddings for ${chunksToEmbed.length} chunks from page ${pageId}`,
       );
 
       // Process in batches
@@ -65,17 +69,27 @@ export class EmbeddingProcessor extends WorkerHost {
         );
       }
 
-      // Mark website as ready
-      await this.websiteRepo.update(websiteId, {
-        status: WebsiteStatus.READY,
+      this.logger.log(
+        `Embedding complete for page ${pageId}: ${chunksToEmbed.length} chunks embedded`,
+      );
+
+      // Check if all pages for this website are fully processed
+      const pendingPages = await this.pageRepo.count({
+        where: [
+          { website_id: websiteId, status: PageStatus.SCRAPED },
+          { website_id: websiteId, status: PageStatus.CHUNKED },
+        ],
       });
 
-      this.logger.log(
-        `Embedding complete for ${websiteId}: ${chunksToEmbed.length} chunks embedded`,
-      );
+      if (pendingPages === 0) {
+        await this.websiteRepo.update(websiteId, {
+          status: WebsiteStatus.READY,
+        });
+        this.logger.log(`Website ${websiteId} is fully processed and READY`);
+      }
     } catch (error) {
       this.logger.error(
-        `Embedding generation failed for ${websiteId}: ${error}`,
+        `Embedding generation failed for page ${pageId}: ${error}`,
       );
       await this.websiteRepo.update(websiteId, {
         status: WebsiteStatus.ERROR,

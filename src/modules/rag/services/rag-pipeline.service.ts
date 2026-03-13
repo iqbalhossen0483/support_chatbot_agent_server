@@ -10,7 +10,7 @@ export interface RagResult {
   shouldEscalate: boolean;
   escalationReason?: string;
   sources: string[];
-  chunkIds: string[];
+  chunkIds: number[];
 }
 
 @Injectable()
@@ -25,7 +25,7 @@ export class RagPipelineService {
 
   async query(
     userQuery: string,
-    websiteId: string,
+    websiteId: number,
     conversationHistory: Message[],
   ): Promise<RagResult> {
     // 1. Generate query embedding

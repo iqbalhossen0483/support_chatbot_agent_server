@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -31,27 +32,27 @@ export class KnowledgeController {
   }
 
   @Get('websites/:id')
-  async getWebsite(@Param('id') id: string) {
+  async getWebsite(@Param('id', ParseIntPipe) id: number) {
     return this.knowledgeService.getWebsite(id);
   }
 
   @Post('websites/:id/scrape')
-  async triggerRescrape(@Param('id') id: string) {
+  async triggerRescrape(@Param('id', ParseIntPipe) id: number) {
     return this.knowledgeService.triggerRescrape(id);
   }
 
   @Delete('websites/:id')
-  async deleteWebsite(@Param('id') id: string) {
+  async deleteWebsite(@Param('id', ParseIntPipe) id: number) {
     return this.knowledgeService.deleteWebsite(id);
   }
 
   @Get('websites/:id/pages')
-  async getPages(@Param('id') id: string) {
+  async getPages(@Param('id', ParseIntPipe) id: number) {
     return this.knowledgeService.getPages(id);
   }
 
   @Get('websites/:id/stats')
-  async getStats(@Param('id') id: string) {
+  async getStats(@Param('id', ParseIntPipe) id: number) {
     return this.knowledgeService.getStats(id);
   }
 }
