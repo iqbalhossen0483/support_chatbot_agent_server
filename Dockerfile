@@ -1,45 +1,42 @@
-FROM node:22-alpine AS builder
+# --- Build stage ---
+FROM node:20-slim AS build
 
 WORKDIR /app
 
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    cairo-dev \
-    pango-dev \
-    jpeg-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev
-
-COPY package.json yarn.lock ./
-
-RUN yarn install --frozen-lockfile
+COPY package.json package-lock.json* ./
+RUN npm ci
 
 COPY . .
+RUN npm run build
 
-RUN yarn build
+# --- Production stage ---
+FROM node:20-slim
 
-# Production stage
-FROM node:22-alpine AS production
+# Puppeteer dependencies (Chromium)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-liberation \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgbm1 \
+    libnss3 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-RUN apk add --no-cache \
-    cairo \
-    pango \
-    jpeg \
-    giflib \
-    librsvg \
-    pixman
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
 
-COPY package.json yarn.lock ./
+COPY --from=build /app/dist ./dist
 
-RUN yarn install --frozen-lockfile --production
-
-COPY --from=builder /app/dist ./dist
-
-EXPOSE 8080
+EXPOSE 3000
 
 CMD ["node", "dist/main"]
