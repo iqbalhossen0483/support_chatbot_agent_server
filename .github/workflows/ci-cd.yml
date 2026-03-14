@@ -9,7 +9,7 @@ on:
 env:
   DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
-  # RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+  RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
   REGISTRY_IMAGE: iqbalhossen60483/chatbot-agent
 
 jobs:
@@ -54,9 +54,9 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache,mode=max
 
-      # - name: Trigger Render Deploy
-      #   if: success()
-      #   run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+      - name: Trigger Render Deploy
+        if: success()
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
       - name: Image digest
         run: echo ${{ steps.build.outputs.digest }}
