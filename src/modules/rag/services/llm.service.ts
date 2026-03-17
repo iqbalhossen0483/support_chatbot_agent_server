@@ -69,26 +69,35 @@ export class LlmService {
     context: ChunkWithScore[],
     conversationHistory: Message[],
     businessName: string = 'our company',
+    contextUrls: string[] = [],
   ): AsyncGenerator<string> {
     const systemPrompt = buildSystemPrompt(
       businessName,
       context,
       conversationHistory,
+      contextUrls,
     );
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
+    const requestBody: Record<string, unknown> = {
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: query }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+      },
+    };
+
+    // Enable Gemini URL context tool when context URLs are configured
+    if (contextUrls.length > 0) {
+      requestBody.tools = [{ url_context: {} }];
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: query }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

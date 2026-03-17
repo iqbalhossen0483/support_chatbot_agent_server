@@ -5,6 +5,7 @@ export function buildSystemPrompt(
   businessName: string,
   context: ChunkWithScore[],
   conversationHistory: Message[],
+  contextUrls: string[] = [],
 ): string {
   const contextText = context
     .map(
@@ -32,6 +33,7 @@ RULES:
 
 CONTEXT:
 ${contextText || 'No relevant context found.'}
+${contextUrls.length > 0 ? `\nLIVE REFERENCE URLS (fetch these for the most up-to-date information like pricing, plans, availability when the user's question is related):\n${contextUrls.join('\n')}` : ''}
 
 CONVERSATION HISTORY:
 ${historyText || 'No prior conversation.'}`;

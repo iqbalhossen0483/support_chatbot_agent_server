@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Message } from '../../../entities/message.entity.js';
 import { ConfidenceService } from './confidence.service.js';
 import { LlmService } from './llm.service.js';
@@ -16,12 +17,16 @@ export interface RagResult {
 @Injectable()
 export class RagPipelineService {
   private readonly logger = new Logger(RagPipelineService.name);
+  private readonly contextUrls: string[];
 
   constructor(
     private readonly vectorSearch: VectorSearchService,
     private readonly llm: LlmService,
     private readonly confidence: ConfidenceService,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.contextUrls = this.config.get<string[]>('rag.contextUrls') || [];
+  }
 
   async query(
     userQuery: string,
@@ -64,6 +69,8 @@ export class RagPipelineService {
       userQuery,
       chunks,
       conversationHistory,
+      'our company',
+      this.contextUrls,
     );
 
     // Wrap the stream to collect full response and evaluate confidence after
