@@ -11,6 +11,7 @@ import databaseConfig from './config/database.config.js';
 import geminiConfig from './config/gemini.config.js';
 import ragConfig from './config/rag.config.js';
 import redisConfig from './config/redis.config.js';
+import chatwootConfig from './config/chatwoot.config.js';
 import scraperConfig from './config/scraper.config.js';
 
 import { Chunk } from './entities/chunk.entity.js';
@@ -26,6 +27,7 @@ import { ChatModule } from './modules/chat/chat.module.js';
 import { EscalationModule } from './modules/escalation/escalation.module.js';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module.js';
 import { RagModule } from './modules/rag/rag.module.js';
+import { WebhookModule } from './modules/webhook/webhook.module.js';
 import { WebsiteModule } from './modules/website/website.module.js';
 
 @Module({
@@ -40,6 +42,7 @@ import { WebsiteModule } from './modules/website/website.module.js';
         bullmqConfig,
         geminiConfig,
         scraperConfig,
+        chatwootConfig,
         ragConfig,
       ],
     }),
@@ -98,6 +101,7 @@ import { WebsiteModule } from './modules/website/website.module.js';
     KnowledgeModule,
     RagModule,
     EscalationModule,
+    WebhookModule,
     WebsiteModule,
   ],
 })

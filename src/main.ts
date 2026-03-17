@@ -6,7 +6,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
 import { globalValidationPipe } from './common/pipes/validation.pipe.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
   // Global prefix

@@ -68,6 +68,16 @@ export class ChatService {
     return saved;
   }
 
+  async findConversationBySessionId(
+    sessionId: string,
+  ): Promise<Conversation | null> {
+    return this.conversationRepo.findOne({
+      where: { session_id: sessionId },
+      relations: ['messages'],
+      order: { messages: { created_at: 'ASC' } },
+    });
+  }
+
   async getConversationMessages(conversationId: number): Promise<Message[]> {
     return this.messageRepo.find({
       where: { conversation_id: conversationId },
