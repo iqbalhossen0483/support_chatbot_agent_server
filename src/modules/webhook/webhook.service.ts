@@ -165,6 +165,53 @@ export class WebhookService {
       // Turn off typing indicator
       await this.chatwootApi.toggleTyping(chatwootConversationId, 'off');
 
+      // Handle escalation — don't send RAG response, hand off to human
+      if (result.shouldEscalate) {
+        const escalation = await this.escalationService.createEscalation(
+          conversationId,
+          conversation.website_id,
+          result.escalationReason || 'low_confidence',
+          conversation.messages,
+        );
+
+        await this.chatService.updateConversationStatus(
+          conversationId,
+          ConversationStatus.ESCALATED,
+        );
+
+        // Save escalation message in our DB
+        await this.chatService.addMessage(
+          conversationId,
+          MessageRole.ASSISTANT,
+          'Let me connect you with a support agent who can help further.',
+          result.confidenceScore,
+          { channel: 'chatwoot', escalated: true },
+        );
+
+        // Send single handoff message to customer
+        await this.chatwootApi.sendMessage(
+          chatwootConversationId,
+          'Let me connect you with a support agent who can help further.',
+        );
+
+        // Add private note for human agents with context
+        await this.chatwootApi.sendPrivateNote(
+          chatwootConversationId,
+          `🤖 Bot escalated this conversation.\nReason: ${result.escalationReason || 'low_confidence'}\nCustomer asked: "${content}"`,
+        );
+
+        // Set conversation to open so human agents can see it
+        await this.chatwootApi.toggleStatus(
+          chatwootConversationId,
+          ChatwootConversationStatus.Open,
+        );
+
+        this.logger.log(
+          `Escalation ${escalation.id} created for Chatwoot conversation ${chatwootConversationId}`,
+        );
+        return;
+      }
+
       // Save assistant message
       await this.chatService.addMessage(
         conversationId,
@@ -180,35 +227,6 @@ export class WebhookService {
 
       // Send AI response back to Chatwoot
       await this.chatwootApi.sendMessage(chatwootConversationId, fullResponse);
-
-      // Handle escalation
-      if (result.shouldEscalate) {
-        const escalation = await this.escalationService.createEscalation(
-          conversationId,
-          conversation.website_id,
-          result.escalationReason || 'low_confidence',
-          conversation.messages,
-        );
-
-        await this.chatService.updateConversationStatus(
-          conversationId,
-          ConversationStatus.ESCALATED,
-        );
-
-        this.logger.log(
-          `Escalation ${escalation.id} created for Chatwoot conversation ${chatwootConversationId}`,
-        );
-
-        // Notify customer and mark conversation as pending for human agent
-        await this.chatwootApi.sendMessage(
-          chatwootConversationId,
-          'Let me connect you with a support agent who can help further.',
-        );
-        await this.chatwootApi.toggleStatus(
-          chatwootConversationId,
-          ChatwootConversationStatus.Pending,
-        );
-      }
     } catch (error) {
       this.logger.error(
         `Error processing message for Chatwoot conversation ${chatwootConversationId}: ${error}`,

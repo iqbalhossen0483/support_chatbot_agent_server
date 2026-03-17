@@ -107,6 +107,49 @@ export class ChatwootApiService {
   }
 
   /**
+   * Send a private note (only visible to agents) in a conversation.
+   * POST /api/v1/accounts/{account_id}/conversations/{conversation_id}/messages
+   */
+  async sendPrivateNote(
+    conversationId: number,
+    text: string,
+  ): Promise<number | null> {
+    const url = `${this.baseUrl}/conversations/${conversationId}/messages`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          api_access_token: this.apiToken,
+        },
+        body: JSON.stringify({
+          content: text,
+          message_type: 'outgoing',
+          private: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(
+          `Chatwoot private note error [${response.status}]: ${errorBody}`,
+        );
+        return null;
+      }
+
+      const data = (await response.json()) as SendMessageResponse;
+      this.logger.log(
+        `Private note sent to Chatwoot conversation ${conversationId}`,
+      );
+      return data.id;
+    } catch (error) {
+      this.logger.error(`Failed to send private note: ${error}`);
+      return null;
+    }
+  }
+
+  /**
    * Toggle typing indicator on/off.
    * POST /api/v1/accounts/{account_id}/conversations/{conversation_id}/toggle_typing_status
    */
