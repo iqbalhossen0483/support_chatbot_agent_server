@@ -51,26 +51,10 @@ export class RagPipelineService {
 
     // 5. Pre-check confidence (before LLM call)
     const preCheck = this.confidence.evaluate(rewrittenQuery, chunks, '');
-    if (!preCheck.confident && !chunks.length) {
-      // No relevant context at all — create escalation stream
-      const escalationMessage =
-        "I don't have enough information to answer this question accurately. Let me connect you with a support agent who can help.";
 
-      async function* escalationStream(): AsyncGenerator<string> {
-        yield await Promise.resolve(escalationMessage);
-      }
-
-      return {
-        stream: escalationStream(),
-        confidenceScore: preCheck.confidenceScore,
-        shouldEscalate: true,
-        escalationReason: preCheck.reason,
-        sources: [],
-        chunkIds: [],
-      };
-    }
-
-    // 6. Generate response via LLM (streaming) — use original query for natural response
+    // 6. Always let the LLM handle the query — it knows how to handle greetings,
+    // small talk, and abuse even without context. Only the LLM should decide
+    // to escalate via [ESCALATE] in its response.
     const llmStream = this.llm.generateResponse(
       userQuery,
       chunks,
