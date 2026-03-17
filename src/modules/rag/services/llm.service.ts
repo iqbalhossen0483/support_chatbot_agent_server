@@ -64,6 +64,70 @@ export class LlmService {
     return data.embeddings.map((e) => e.values);
   }
 
+  /**
+   * Rewrite user query using conversation history to resolve pronouns and context.
+   * e.g., "what is verpex" + "give me the hosting plan of them" → "What are the hosting plans of Verpex?"
+   */
+  async rewriteQuery(
+    query: string,
+    conversationHistory: Message[],
+  ): Promise<string> {
+    // Skip rewriting if no history or query is already self-contained
+    if (conversationHistory.length === 0) {
+      return query;
+    }
+
+    const recentHistory = conversationHistory
+      .slice(-6)
+      .map((m) => `${m.role}: ${m.content}`)
+      .join('\n');
+
+    const prompt = `Given the conversation history and the latest user message, rewrite the user message as a standalone query that includes all necessary context. Resolve pronouns (them, it, they, this, that, etc.) and references to previous messages. Only output the rewritten query, nothing else.
+
+CONVERSATION HISTORY:
+${recentHistory}
+
+LATEST USER MESSAGE:
+${query}
+
+REWRITTEN QUERY:`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 256,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`Query rewrite failed: ${response.status}`);
+        return query;
+      }
+
+      const data = (await response.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const rewritten = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+      if (rewritten) {
+        this.logger.log(`Query rewritten: "${query}" → "${rewritten}"`);
+        return rewritten;
+      }
+      return query;
+    } catch (error) {
+      this.logger.warn(`Query rewrite error: ${error}`);
+      return query;
+    }
+  }
+
   async *generateResponse(
     query: string,
     context: ChunkWithScore[],
@@ -78,7 +142,11 @@ export class LlmService {
       contextUrls,
     );
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+    // Use gemini-2.5-flash when URL context is needed (url_context tool requires 2.5+)
+    const useUrlContext = contextUrls.length > 0;
+    const modelToUse = useUrlContext ? 'gemini-2.5-flash' : this.model;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
     const requestBody: Record<string, unknown> = {
       system_instruction: { parts: [{ text: systemPrompt }] },
@@ -89,8 +157,7 @@ export class LlmService {
       },
     };
 
-    // Enable Gemini URL context tool when context URLs are configured
-    if (contextUrls.length > 0) {
+    if (useUrlContext) {
       requestBody.tools = [{ url_context: {} }];
     }
 

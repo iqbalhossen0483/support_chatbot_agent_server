@@ -33,18 +33,24 @@ export class RagPipelineService {
     websiteId: number,
     conversationHistory: Message[],
   ): Promise<RagResult> {
-    // 1. Generate query embedding
-    const queryEmbedding = await this.llm.generateEmbedding(userQuery);
+    // 1. Rewrite query using conversation history (resolve pronouns/context)
+    const rewrittenQuery = await this.llm.rewriteQuery(
+      userQuery,
+      conversationHistory,
+    );
 
-    // 2. Vector search
+    // 2. Generate query embedding from rewritten query
+    const queryEmbedding = await this.llm.generateEmbedding(rewrittenQuery);
+
+    // 3. Vector search
     const chunks = await this.vectorSearch.search(queryEmbedding, websiteId);
 
-    // 3. Extract sources
+    // 4. Extract sources
     const sources = [...new Set(chunks.map((c) => c.sourceUrl).filter(Boolean))];
     const chunkIds = chunks.map((c) => c.chunk.id);
 
-    // 4. Pre-check confidence (before LLM call)
-    const preCheck = this.confidence.evaluate(userQuery, chunks, '');
+    // 5. Pre-check confidence (before LLM call)
+    const preCheck = this.confidence.evaluate(rewrittenQuery, chunks, '');
     if (!preCheck.confident && !chunks.length) {
       // No relevant context at all — create escalation stream
       const escalationMessage =
@@ -64,7 +70,7 @@ export class RagPipelineService {
       };
     }
 
-    // 5. Generate response via LLM (streaming)
+    // 6. Generate response via LLM (streaming) — use original query for natural response
     const llmStream = this.llm.generateResponse(
       userQuery,
       chunks,
@@ -87,7 +93,7 @@ export class RagPipelineService {
 
       // Post-stream confidence evaluation
       finalConfidence = confidenceService.evaluate(
-        userQuery,
+        rewrittenQuery,
         chunks,
         fullResponse,
       );
