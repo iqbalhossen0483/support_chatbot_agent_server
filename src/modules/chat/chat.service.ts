@@ -33,7 +33,7 @@ export class ChatService {
   async getConversation(id: number): Promise<Conversation> {
     const conversation = await this.conversationRepo.findOne({
       where: { id },
-      relations: ['messages'],
+      relations: ['messages', 'website'],
       order: { messages: { created_at: 'ASC' } },
     });
     if (!conversation) {

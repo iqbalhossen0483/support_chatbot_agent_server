@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +24,7 @@ export class KnowledgeController {
       dto.name,
       dto.baseUrl,
       dto.scrapeConfig,
+      dto.brandContext,
     );
   }
 
@@ -34,6 +36,15 @@ export class KnowledgeController {
   @Get('websites/:id')
   async getWebsite(@Param('id', ParseIntPipe) id: number) {
     return this.knowledgeService.getWebsite(id);
+  }
+
+  @Patch('websites/:id/brand-context')
+  async updateBrandContext(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('brandContext') brandContext: string,
+  ) {
+    await this.knowledgeService.updateBrandContext(id, brandContext);
+    return { success: true };
   }
 
   @Post('websites/:id/scrape')

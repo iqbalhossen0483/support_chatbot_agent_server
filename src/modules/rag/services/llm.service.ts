@@ -134,12 +134,14 @@ REWRITTEN QUERY:`;
     conversationHistory: Message[],
     businessName: string = 'our company',
     contextUrls: string[] = [],
+    brandContext?: string | null,
   ): AsyncGenerator<string> {
     const systemPrompt = buildSystemPrompt(
       businessName,
       context,
       conversationHistory,
       contextUrls,
+      brandContext,
     );
 
     // Use gemini-2.5-flash when URL context is needed (url_context tool requires 2.5+)

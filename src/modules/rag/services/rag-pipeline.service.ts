@@ -32,6 +32,7 @@ export class RagPipelineService {
     userQuery: string,
     websiteId: number,
     conversationHistory: Message[],
+    brandContext?: string | null,
   ): Promise<RagResult> {
     // 1. Rewrite query using conversation history (resolve pronouns/context)
     const rewrittenQuery = await this.llm.rewriteQuery(
@@ -61,6 +62,7 @@ export class RagPipelineService {
       conversationHistory,
       'our company',
       this.contextUrls,
+      brandContext,
     );
 
     // Wrap the stream to collect full response and evaluate confidence after

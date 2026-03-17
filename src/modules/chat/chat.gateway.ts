@@ -92,6 +92,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         content,
         conversation.website_id,
         conversation.messages,
+        conversation.website?.brand_context,
       );
 
       // Stream tokens

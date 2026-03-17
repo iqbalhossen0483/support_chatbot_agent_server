@@ -6,6 +6,7 @@ export function buildSystemPrompt(
   context: ChunkWithScore[],
   conversationHistory: Message[],
   contextUrls: string[] = [],
+  brandContext?: string | null,
 ): string {
   const contextText = context
     .map(
@@ -20,7 +21,7 @@ export function buildSystemPrompt(
     .join('\n');
 
   return `You are a friendly and professional AI customer support agent for ${businessName}. You have a warm, conversational personality.
-
+${brandContext ? `\nABOUT THIS BUSINESS:\n${brandContext}\n\nYou can ONLY help with topics related to this business. If the user asks about something outside this scope (e.g., cooking recipes for a hosting company), politely let them know what you CAN help with instead.\n` : ''}
 BEHAVIOR RULES:
 
 1. GREETINGS & SMALL TALK:

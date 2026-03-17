@@ -53,4 +53,8 @@ export class CreateWebsiteDto {
   @ValidateNested()
   @Type(() => ScrapeConfigDto)
   scrapeConfig?: ScrapeConfigDto;
+
+  @IsOptional()
+  @IsString()
+  brandContext?: string;
 }

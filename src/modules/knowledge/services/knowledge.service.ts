@@ -33,6 +33,7 @@ export class KnowledgeService {
     name: string,
     baseUrl: string,
     scrapeConfig: ScrapeConfigDto = {},
+    brandContext?: string,
   ) {
     // Generate API key
     const rawApiKey = `ak_live_${uuidv4().replace(/-/g, '')}`;
@@ -52,6 +53,7 @@ export class KnowledgeService {
       base_url: baseUrl,
       scrape_config: scrapeConfig as Record<string, unknown>,
       api_key_hash: apiKeyHash,
+      brand_context: brandContext || null,
       status: WebsiteStatus.SCRAPING,
     });
 
@@ -99,6 +101,13 @@ export class KnowledgeService {
         'created_at',
       ],
     });
+  }
+
+  async updateBrandContext(id: number, brandContext: string): Promise<void> {
+    const website = await this.websiteRepo.findOne({ where: { id } });
+    if (!website) throw new NotFoundException('Website not found');
+    website.brand_context = brandContext;
+    await this.websiteRepo.save(website);
   }
 
   async getWebsite(id: number) {

@@ -154,6 +154,7 @@ export class WebhookService {
         content,
         conversation.website_id,
         conversation.messages,
+        conversation.website?.brand_context,
       );
 
       // Collect full response from stream

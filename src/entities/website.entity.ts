@@ -43,6 +43,9 @@ export class Website {
   @Column({ type: 'int', default: 0 })
   total_chunks: number;
 
+  @Column({ type: 'text', nullable: true })
+  brand_context: string | null;
+
   @Column({ type: 'varchar', length: 255 })
   api_key_hash: string;
 
